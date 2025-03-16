@@ -8,7 +8,7 @@ import (
 	"github.com/go-playground/validator"
 )
 
-// Пакет валидации для входных данных с http
+// Пакет валидации для входных данных с  http
 
 var global *validator.Validate
 
