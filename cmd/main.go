@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 	"os/signal"
@@ -13,7 +12,6 @@ import (
 	"simple-service/internal/api"
 	"simple-service/internal/config"
 	customLogger "simple-service/internal/logger"
-	"simple-service/internal/repo"
 	"simple-service/internal/service"
 )
 
@@ -30,14 +28,8 @@ func main() {
 		log.Fatal(errors.Wrap(err, "error initializing logger"))
 	}
 
-	// Подключение к PostgreSQL
-	repository, err := repo.NewRepository(context.Background(), cfg.PostgreSQL)
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "failed to initialize repository"))
-	}
-
 	// Создание сервиса с бизнес-логикой
-	serviceInstance := service.NewService(repository, logger)
+	serviceInstance := service.NewService(logger)
 
 	// Инициализация API
 	app := api.NewRouters(&api.Routers{Service: serviceInstance}, cfg.Rest.Token)
