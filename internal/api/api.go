@@ -32,7 +32,16 @@ func NewRouters(r *Routers, token string) *fiber.App {
 	apiGroup.Post("/tasks", r.Service.CreateTask)
 
 	// Роут для получения задачи по id
-	apiGroup.Get("/tasks/:id", r.Service.GetTask)
+	apiGroup.Get("/task/:id", r.Service.GetTask)
+
+	// Роут для получения всех задач
+	apiGroup.Get("/tasks", r.Service.GetAllTasks)
+
+	// Роут для обновления задачи
+	apiGroup.Put("/task/:id", r.Service.UpdateTask)
+
+	// Роут для удаления задачи
+	apiGroup.Delete("/task/:id", r.Service.DeleteTask)
 
 	return app
 }

@@ -71,3 +71,246 @@ paths:
                   message:
                     type: string
                     example: "Failed to insert task"
+
+    get:
+      summary: Get all tasks
+      description: Retrieves a list of all tasks in the system.
+      responses:
+        '200':
+          description: List of tasks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        task_id:
+                          type: integer
+                          example: 1
+                        title:
+                          type: string
+                          example: "Implement new feature"
+                        description:
+                          type: string
+                          example: "Develop a new API endpoint for user management"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                    example: "Failed to retrieve tasks"
+
+  /v1/task/{id}:
+    get:
+      summary: Get a task by ID
+      description: Retrieves a task by its unique identifier.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the task to retrieve.
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Task retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      task_id:
+                        type: integer
+                        example: 1
+                      title:
+                        type: string
+                        example: "Implement new feature"
+                      description:
+                        type: string
+                        example: "Develop a new API endpoint for user management"
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                    example: "Task not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                    example: "Failed to retrieve task"
+
+    put:
+      summary: Update a task by ID
+      description: Updates an existing task by its unique identifier.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the task to update.
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Updated task title"
+                description:
+                  type: string
+                  example: "Updated task description"
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  data:
+                    type: object
+                    properties:
+                      task_id:
+                        type: integer
+                        example: 1
+                      title:
+                        type: string
+                        example: "Updated task title"
+                      description:
+                        type: string
+                        example: "Updated task description"
+        '400':
+          description: Invalid request format
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                    example: "Invalid request body"
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                    example: "Task not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                    example: "Failed to update task"
+
+    delete:
+      summary: Delete a task by ID
+      description: Deletes a task by its unique identifier.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The ID of the task to delete.
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Task deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  message:
+                    type: string
+                    example: "Task deleted successfully"
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                    example: "Task not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: error
+                  message:
+                    type: string
+                    example: "Failed to delete task"
