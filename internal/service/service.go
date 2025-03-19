@@ -7,15 +7,15 @@ import (
 	"simple-service/internal/dto"
 	"simple-service/pkg/validator"
 	"strconv"
+	"sync"
 )
 
-// Создание мапы для in-memory хранения
-var tasks = make(map[int]Task)
-var id = 1
+var (
+	tasks = make(map[int]Task)
+	id    = 1
+	mu    sync.RWMutex
+)
 
-// Слой бизнес-логики. Тут должна быть основная логика сервиса
-
-// Service - интерфейс для бизнес-логики
 type Service interface {
 	GetTask(ctx *fiber.Ctx) error
 	GetAllTasks(ctx *fiber.Ctx) error
@@ -24,45 +24,40 @@ type Service interface {
 	DeleteTask(ctx *fiber.Ctx) error
 }
 
+func NewService(logger *zap.SugaredLogger) Service {
+	return &service{log: logger}
+}
+
 type service struct {
 	log *zap.SugaredLogger
 }
 
-// NewService - конструктор сервиса
-func NewService(logger *zap.SugaredLogger) Service {
-	return &service{
-		log: logger,
-	}
-}
-
-// CreateTask - обработчик запроса на создание задачи
 func (s *service) CreateTask(ctx *fiber.Ctx) error {
 	var req TaskRequest
 
-	// Десериализация JSON-запроса
 	if err := json.Unmarshal(ctx.Body(), &req); err != nil {
 		s.log.Error("Invalid request body", zap.Error(err))
 		return dto.BadResponseError(ctx, dto.FieldBadFormat, "Invalid request body")
 	}
 
-	// Валидация входных данных
 	if vErr := validator.Validate(ctx.Context(), req); vErr != nil {
 		return dto.BadResponseError(ctx, dto.FieldIncorrect, vErr.Error())
 	}
 
+	mu.Lock()
 	tasks[id] = Task{
 		ID:          id,
 		Title:       req.Title,
 		Description: req.Description,
 		Status:      "new",
 	}
+	id++
+	mu.Unlock()
 
-	// Формирование ответа
 	response := dto.Response{
 		Status: "success",
-		Data:   map[string]int{"task_id": id},
+		Data:   map[string]int{"task_id": id - 1},
 	}
-	id++
 
 	return ctx.Status(fiber.StatusOK).JSON(response)
 }
@@ -74,12 +69,15 @@ func (s *service) GetTask(ctx *fiber.Ctx) error {
 		return dto.BadResponseError(ctx, dto.FieldBadFormat, "ID must be only number")
 	}
 
+	mu.RLock()
 	value, exists := tasks[taskID]
-	if exists != true {
+	mu.RUnlock()
+
+	if !exists {
 		s.log.Error("Failed to get task", zap.Error(err))
 		return dto.NotFoundError(ctx)
 	}
-	// Формирование ответа
+
 	response := dto.Response{
 		Status: "success",
 		Data:   value,
@@ -89,15 +87,13 @@ func (s *service) GetTask(ctx *fiber.Ctx) error {
 }
 
 func (s *service) GetAllTasks(ctx *fiber.Ctx) error {
-	// Создаем срез для хранения всех задач
+	mu.RLock()
 	allTasks := make([]Task, 0, len(tasks))
-
-	// Перебираем все элементы в map
 	for _, task := range tasks {
 		allTasks = append(allTasks, task)
 	}
+	mu.RUnlock()
 
-	// Формирование ответа
 	response := dto.Response{
 		Status: "success",
 		Data:   allTasks,
@@ -113,22 +109,23 @@ func (s *service) UpdateTask(ctx *fiber.Ctx) error {
 		return dto.BadResponseError(ctx, dto.FieldBadFormat, "ID must be only number")
 	}
 
+	mu.Lock()
 	_, exists := tasks[taskID]
-	if exists != true {
+	if !exists {
+		mu.Unlock()
 		s.log.Error("Failed to update task", zap.Error(err))
 		return dto.NotFoundError(ctx)
 	}
 
 	var req TaskRequest
-
-	// Десериализация JSON-запроса
 	if err := json.Unmarshal(ctx.Body(), &req); err != nil {
+		mu.Unlock()
 		s.log.Error("Invalid request body", zap.Error(err))
 		return dto.BadResponseError(ctx, dto.FieldBadFormat, "Invalid request body")
 	}
 
-	// Валидация входных данных
 	if vErr := validator.Validate(ctx.Context(), req); vErr != nil {
+		mu.Unlock()
 		return dto.BadResponseError(ctx, dto.FieldIncorrect, vErr.Error())
 	}
 
@@ -138,8 +135,8 @@ func (s *service) UpdateTask(ctx *fiber.Ctx) error {
 		Description: req.Description,
 		Status:      "done",
 	}
+	mu.Unlock()
 
-	// Формирование ответа
 	response := dto.Response{
 		Status: "success",
 		Data:   map[string]int{"task_id": taskID},
@@ -154,15 +151,17 @@ func (s *service) DeleteTask(ctx *fiber.Ctx) error {
 		return dto.BadResponseError(ctx, dto.FieldBadFormat, "ID must be only number")
 	}
 
+	mu.Lock()
 	_, exists := tasks[taskID]
-	if exists != true {
+	if !exists {
+		mu.Unlock()
 		s.log.Error("Failed to delete task", zap.Error(err))
 		return dto.NotFoundError(ctx)
 	}
 
 	delete(tasks, taskID)
+	mu.Unlock()
 
-	// Формирование ответа
 	response := dto.Response{
 		Status: "success",
 		Data:   map[string]int{"task_id": taskID},
