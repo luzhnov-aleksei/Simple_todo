@@ -1,10 +1,11 @@
-package service
+package tasks_service
 
 import (
 	"encoding/json"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
 	"simple-service/internal/dto"
+	"simple-service/internal/repo"
 	"simple-service/pkg/validator"
 	"strconv"
 	"sync"
@@ -16,7 +17,7 @@ var (
 	mu    sync.RWMutex
 )
 
-type Service interface {
+type TasksService interface {
 	GetTask(ctx *fiber.Ctx) error
 	GetAllTasks(ctx *fiber.Ctx) error
 	CreateTask(ctx *fiber.Ctx) error
@@ -24,12 +25,16 @@ type Service interface {
 	DeleteTask(ctx *fiber.Ctx) error
 }
 
-func NewService(logger *zap.SugaredLogger) Service {
-	return &service{log: logger}
+func NewService(repo repo.Repository, logger *zap.SugaredLogger) TasksService {
+	return &service{
+		repo: repo,
+		log:  logger,
+	}
 }
 
 type service struct {
-	log *zap.SugaredLogger
+	repo repo.Repository
+	log  *zap.SugaredLogger
 }
 
 func (s *service) CreateTask(ctx *fiber.Ctx) error {

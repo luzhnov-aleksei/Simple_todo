@@ -1,4 +1,4 @@
-package service
+package tasks_service
 
 // TaskRequest - структура, представляющая тело запроса
 type TaskRequest struct {

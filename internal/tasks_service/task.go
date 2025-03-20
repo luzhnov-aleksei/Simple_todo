@@ -1,4 +1,4 @@
-package service
+package tasks_service
 
 // Task - структура, соответствующая таблице tasks
 type Task struct {

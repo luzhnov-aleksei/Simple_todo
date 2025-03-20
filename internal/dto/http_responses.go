@@ -11,7 +11,7 @@ const (
 	FieldIncorrect     = "FIELD_INCORRECT"
 	ServiceUnavailable = "SERVICE_UNAVAILABLE"
 	InternalError      = "Service is currently unavailable. Please try again later."
-	NotFound           = "Task not found"
+	NotFound           = "Not found"
 	NotFoundCode       = "NOT FOUND"
 )
 
