@@ -15,14 +15,20 @@ import (
 
 // SQL-запрос на вставку задачи
 const (
-	insertTaskQuery = `INSERT INTO tasks (title, description) VALUES ($1, $2) RETURNING id`
-	getTaskQuery    = `SELECT title, description FROM tasks WHERE id=($1)`
+	insertTaskQuery  = `INSERT INTO tasks (user_id, title, description) VALUES ($1, $2, $3) RETURNING id`
+	getTaskQuery     = `SELECT id, user_id, title, description, status, created_at FROM tasks WHERE id=($1)`
+	getAllTasksQuery = `SELECT id, user_id, title,description, status, created_at FROM tasks`
+	updateTaskQuery  = `UPDATE tasks SET title = $1, description = $2, status = $3 WHERE id = $4`
+	deleteTaskQuery  = `DELETE FROM tasks WHERE id = $1`
+	checkTaskQuery   = "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = $1)"
 
-	insertUserQuery  = `INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id`
-	getUserQuery     = `SELECT id, username, password, created_at FROM users WHERE id=($1)`
-	getAllUsersQuery = `SELECT id, username, password, created_at FROM users`
-	updateUserQuery  = `UPDATE users SET username = $1, password = $2 WHERE id = $3`
-	deleteUserQuery  = `DELETE FROM users WHERE id = $1`
+	insertUserQuery    = `INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id`
+	getUserQuery       = `SELECT id, username, password, created_at FROM users WHERE id=($1)`
+	getAllUsersQuery   = `SELECT id, username, password, created_at FROM users`
+	updateUserQuery    = `UPDATE users SET username = $1, password = $2  WHERE id = $3`
+	deleteUserQuery    = `DELETE FROM users WHERE id = $1`
+	checkUserQuery     = "SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)"
+	getAllTaskFromUser = "SELECT t.* FROM users AS u LEFT JOIN tasks AS t ON t.user_id = u.id WHERE u.username = $1;"
 )
 
 type repository struct {
@@ -32,8 +38,13 @@ type repository struct {
 // Repository - интерфейс с методом создания задачи
 type Repository interface {
 	// Задачи
-	GetTask(ctx context.Context, taskID int) (*Task, error)
 	CreateTask(ctx context.Context, task Task) (int, error)
+	GetTask(ctx context.Context, taskID int) (*TaskView, error)
+	GetAllTasks(ctx context.Context) (*[]TaskView, error)
+	UpdateTask(ctx context.Context, task TaskUpdate) error
+	DeleteTask(ctx context.Context, id int) error
+	CheckTaskExists(ctx context.Context, userID int) (bool, error)
+	GetAllTaskFromUser(ctx context.Context, username string) (*[]TaskView, error)
 
 	// Пользователи
 	CreateUser(ctx context.Context, user UserCreate) (int, error)
@@ -41,6 +52,7 @@ type Repository interface {
 	GetAllUsers(ctx context.Context) (*[]UserView, error)
 	UpdateUser(ctx context.Context, user UserUpdate) error
 	DeleteUser(ctx context.Context, id int) error
+	CheckUserExists(ctx context.Context, userID int) (bool, error)
 }
 
 // NewRepository - создание нового экземпляра репозитория с подключением к PostgreSQL
@@ -81,20 +93,65 @@ func NewRepository(ctx context.Context, cfg config.PostgreSQL) (Repository, erro
 // CreateTask - вставка новой задачи в таблицу tasks
 func (r *repository) CreateTask(ctx context.Context, task Task) (int, error) {
 	var id int
-	err := r.pool.QueryRow(ctx, insertTaskQuery, task.Title, task.Description).Scan(&id)
+	err := r.pool.QueryRow(ctx, insertTaskQuery, task.UserID, task.Title, task.Description).Scan(&id)
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to insert task")
 	}
 	return id, nil
 }
 
-func (r *repository) GetTask(ctx context.Context, taskID int) (*Task, error) {
-	var task Task
-	err := r.pool.QueryRow(ctx, getTaskQuery, taskID).Scan(&task.Title, &task.Description)
+func (r *repository) GetTask(ctx context.Context, taskID int) (*TaskView, error) {
+	var task TaskView
+	err := r.pool.QueryRow(ctx, getTaskQuery, taskID).Scan(
+		&task.ID, &task.UserID, &task.Title, &task.Description, &task.Status, &task.CreatedAt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get task")
 	}
 	return &task, nil
+}
+
+func (r *repository) GetAllTasks(ctx context.Context) (*[]TaskView, error) {
+	var tasks []TaskView
+	rows, err := r.pool.Query(ctx, getAllTasksQuery)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get all tasks")
+	}
+	for rows.Next() {
+		var task TaskView
+		// Сканируем значения из строки в поля структуры User
+		if err := rows.Scan(
+			&task.ID, &task.UserID, &task.Title, &task.Description, &task.Status, &task.CreatedAt); err != nil {
+			return nil, errors.Wrap(err, "failed to get all users")
+		}
+		tasks = append(tasks, task)
+	}
+
+	return &tasks, nil
+}
+
+func (r *repository) UpdateTask(ctx context.Context, task TaskUpdate) error {
+	_, err := r.pool.Query(ctx, updateTaskQuery, task.Title, task.Description, task.Status, task.ID)
+	if err != nil {
+		return errors.Wrap(err, "failed to update task")
+	}
+	return nil
+}
+
+func (r *repository) DeleteTask(ctx context.Context, id int) error {
+	_, err := r.pool.Query(ctx, deleteTaskQuery, id)
+	if err != nil {
+		return errors.Wrap(err, "failed to delete task")
+	}
+	return nil
+}
+
+func (r *repository) CheckTaskExists(ctx context.Context, userID int) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, checkTaskQuery, userID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // Users ------------------------------------
@@ -149,4 +206,32 @@ func (r *repository) DeleteUser(ctx context.Context, id int) error {
 		return errors.Wrap(err, "failed to delete user")
 	}
 	return nil
+}
+
+func (r *repository) CheckUserExists(ctx context.Context, userID int) (bool, error) {
+	var exists bool
+	err := r.pool.QueryRow(ctx, checkUserQuery, userID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (r *repository) GetAllTaskFromUser(ctx context.Context, username string) (*[]TaskView, error) {
+	var tasks []TaskView
+	rows, err := r.pool.Query(ctx, getAllTaskFromUser, username)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get all tasks from user")
+	}
+	for rows.Next() {
+		var task TaskView
+		// Сканируем значения из строки в поля структуры User
+		if err := rows.Scan(
+			&task.ID, &task.UserID, &task.Title, &task.Description, &task.Status, &task.CreatedAt); err != nil {
+			return nil, errors.Wrap(err, "failed to get all tasks from user")
+		}
+		tasks = append(tasks, task)
+	}
+
+	return &tasks, nil
 }

@@ -112,11 +112,6 @@ func (s *service) UpdateUser(ctx *fiber.Ctx) error {
 		s.log.Error("Failed to parse int", zap.Error(err))
 		return dto.BadResponseError(ctx, dto.FieldBadFormat, "ID must be only number")
 	}
-	// Десериализация JSON-запроса
-	if err := json.Unmarshal(ctx.Body(), &req); err != nil {
-		s.log.Error("Invalid request body", zap.Error(err))
-		return dto.BadResponseError(ctx, dto.FieldBadFormat, "Invalid request body")
-	}
 
 	// Валидация входных данных
 	if vErr := validator.Validate(ctx.Context(), req); vErr != nil {

@@ -45,6 +45,9 @@ func NewRouters(r *Routers, token string) *fiber.App {
 	// Роут для удаления задачи
 	apiGroup.Delete("/task/:id", r.TasksService.DeleteTask)
 
+	// Роут для получения всех задач от пользователя
+	apiGroup.Get("/task", r.TasksService.GetAllTasksFromUser)
+
 	//--------------------------------------------------------
 	// Роут для создания пользователя
 	apiGroup.Post("/user", r.UsersService.CreateUser)

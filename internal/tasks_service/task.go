@@ -7,3 +7,9 @@ type Task struct {
 	Description string `json:"description"`
 	Status      string `json:"status"`
 }
+
+type TaskUpdateRequest struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Status      string `json:"status"`
+}
