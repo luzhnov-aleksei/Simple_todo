@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// Создание сервиса с бизнес-логикой
-	tasksServiceInstance := tasks_service.NewService(repository, logger)
+	tasksServiceInstance := tasks_service.NewTaskService(repository, logger)
 	usersServiceInstance := users_service.NewService(repository, logger)
 
 	// Инициализация API

@@ -20,7 +20,7 @@ type TasksService interface {
 	GetAllTasksFromUser(ctx *fiber.Ctx) error
 }
 
-func NewService(repo repo.Repository, logger *zap.SugaredLogger) TasksService {
+func NewTaskService(repo repo.Repository, logger *zap.SugaredLogger) TasksService {
 	return &service{
 		repo: repo,
 		log:  logger,
