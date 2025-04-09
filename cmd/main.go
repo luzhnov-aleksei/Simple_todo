@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"simple-service/internal/repo"
+	"simple-service/internal/users_service"
 	"syscall"
 
 	"github.com/kelseyhightower/envconfig"
@@ -13,14 +15,14 @@ import (
 	"simple-service/internal/api"
 	"simple-service/internal/config"
 	customLogger "simple-service/internal/logger"
-	"simple-service/internal/repo"
-	"simple-service/internal/service"
+	"simple-service/internal/tasks_service"
 )
 
 func main() {
 	// Загружаем конфигурацию из переменных окружения
 	var cfg config.AppConfig
-	if err := envconfig.Process("", &cfg); err != nil {
+	if err := envconfig.Process(
+		"", &cfg); err != nil {
 		log.Fatal(errors.Wrap(err, "failed to load configuration"))
 	}
 
@@ -37,10 +39,12 @@ func main() {
 	}
 
 	// Создание сервиса с бизнес-логикой
-	serviceInstance := service.NewService(repository, logger)
+	tasksServiceInstance := tasks_service.NewTaskService(repository, logger)
+	usersServiceInstance := users_service.NewService(repository, logger)
 
 	// Инициализация API
-	app := api.NewRouters(&api.Routers{Service: serviceInstance}, cfg.Rest.Token)
+	app := api.NewRouters(
+		&api.Routers{TasksService: tasksServiceInstance, UsersService: usersServiceInstance}, cfg.Rest.Token)
 
 	// Запуск HTTP-сервера в отдельной горутине
 	go func() {
