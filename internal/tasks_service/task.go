@@ -9,7 +9,7 @@ type Task struct {
 }
 
 type TaskUpdateRequest struct {
-	Title       string `json:"title"`
+	Title       string `json:"title" validate:"required,min=3"`
 	Description string `json:"description"`
-	Status      string `json:"status"`
+	Status      string `json:"status" validate:"required,oneof=todo in_progress done"`
 }
